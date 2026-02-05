@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>นักปรุงสมการ (ระบบจิ้มวาง)</title>
+    <title>นักปรุงสมการ (Auto Difficulty)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600&display=swap');
 
@@ -20,7 +20,7 @@
             user-select: none;
         }
 
-        h1 { margin-top: 20px; color: #f1c40f; }
+        h1 { margin-top: 10px; color: #f1c40f; margin-bottom: 5px; }
 
         .game-container {
             background: rgba(255, 255, 255, 0.1);
@@ -28,108 +28,124 @@
             border-radius: 20px;
             width: 90%;
             max-width: 600px;
-            margin-top: 20px;
+            margin-top: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
         }
 
+        /* --- Score Board & Level --- */
+        .status-bar { 
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 500px;
+            margin-bottom: 10px;
+            color: #ecf0f1; 
+            font-size: 18px;
+        }
+        .status-item span { font-weight: bold; font-size: 22px; color: #f1c40f; }
+
+        .level-badge {
+            background: #e67e22;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+        /* --- Target Box --- */
         .target-box {
             font-size: 50px;
             background: #e74c3c;
             padding: 10px 40px;
             border-radius: 15px;
             display: inline-block;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             box-shadow: 0 5px 0 #c0392b;
             font-weight: bold;
             animation: pulse 2s infinite;
         }
-
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
+        /* --- Equation Slots --- */
         .equation-area {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 40px;
+            gap: 8px;
+            margin-bottom: 30px;
         }
 
         .slot {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             background-color: #ecf0f1;
             border: 4px dashed #95a5a6;
             border-radius: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 32px;
+            font-size: 28px;
             color: #2c3e50;
             font-weight: bold;
             transition: all 0.2s;
-            cursor: pointer; /* เป็นรูปมือเสมอเพราะกดวางได้ */
+            cursor: pointer;
         }
 
-        /* เอฟเฟกต์ตอนช่องมีของ */
         .slot.filled {
             border-style: solid;
             border-color: #2ecc71;
             background-color: #fff;
             box-shadow: 0 4px 0 #bdc3c7;
         }
-        
-        /* เอฟเฟกต์ตอนเอาเมาส์ชี้ช่องที่ใส่แล้ว (จะลบ) */
-        .slot.filled:hover {
-            background-color: #ffcccc;
-            border-color: #e74c3c;
-        }
+        .slot.filled:hover { background-color: #ffcccc; border-color: #e74c3c; }
 
-        .equals-sign { font-size: 40px; margin: 0 5px; }
+        .equals-sign { font-size: 30px; margin: 0 5px; }
 
+        /* --- Options --- */
         .options-area {
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 15px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 15px;
+            gap: 10px;
             min-height: 80px;
         }
 
         .option-item {
-            width: 60px;
-            height: 60px;
+            width: 55px;
+            height: 55px;
             background: #3498db;
             color: white;
             border-radius: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 0 #2980b9;
             transition: transform 0.1s;
         }
-
         .option-item:active { transform: translateY(2px); box-shadow: none; }
         .option-item[data-type="operator"] { background: #9b59b6; box-shadow: 0 4px 0 #8e44ad; }
-
-        /* --- Highlight เวลาเลือก (สำคัญมาก) --- */
         .option-item.selected {
-            border: 4px solid #f1c40f; /* ขอบสีเหลือง */
+            border: 4px solid #f1c40f;
             transform: scale(1.1) translateY(-5px);
             box-shadow: 0 10px 0 #f39c12;
             z-index: 10;
         }
 
-        .hidden { visibility: hidden; }
-
+        /* --- Buttons --- */
         .btn-check {
-            margin-top: 30px;
-            padding: 15px 40px;
-            font-size: 24px;
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
             background-color: #27ae60;
             color: white;
             border: none;
@@ -140,23 +156,82 @@
         }
         .btn-check:active { transform: translateY(4px); box-shadow: none; }
 
-        .score-board { font-size: 20px; margin-bottom: 10px; color: #ecf0f1; }
+        /* --- POPUP STYLES --- */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            animation: fadeIn 0.3s;
+        }
+
+        #correct-modal { background: rgba(39, 174, 96, 0.95); }
+        #game-over-modal { background: rgba(44, 62, 80, 0.95); }
+
+        .modal-content { text-align: center; animation: popIn 0.5s; }
+        .modal-title { font-size: 40px; margin: 0; font-weight: bold; text-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+        .modal-text { font-size: 24px; margin: 10px 0 30px 0; }
+
+        .btn-modal {
+            padding: 15px 30px;
+            font-size: 22px;
+            background-color: white;
+            color: #333;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+        .btn-modal:active { transform: translateY(4px); box-shadow: none; }
+
+        /* Helpers */
+        .hidden { visibility: hidden; }
         .correct-bg { background-color: #27ae60 !important; color: white !important; }
         .wrong-bg { animation: shake 0.5s; background-color: #c0392b !important; color: white !important; }
 
         @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-10px); } 75% { transform: translateX(-10px); }
-            50% { transform: translateX(10px); } 100% { transform: translateX(0); }
+            0% { transform: translateX(0); } 25% { transform: translateX(-10px); } 
+            75% { transform: translateX(10px); } 100% { transform: translateX(0); }
         }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
     </style>
 </head>
 <body>
 
-    <h1>👆 จิ้มแล้ววางสมการ</h1>
-    <div class="score-board">คะแนน: <span id="score">0</span></div>
+    <h1>👨‍🍳 นักปรุงสมการ</h1>
+    
+    <div class="status-bar">
+        <div class="status-item">คะแนน: <span id="score">0</span></div>
+        <div id="level-display" class="level-badge">LEVEL 1</div>
+        <div class="status-item">สูงสุด: <span id="best-score">0</span></div>
+    </div>
 
     <div class="game-container">
+        
+        <div id="correct-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-title">🎉 สุดยอด! 🎉</div>
+                <p class="modal-text">+10 คะแนน</p>
+                <button class="btn-modal" onclick="nextLevel()">ด่านต่อไป ➡</button>
+            </div>
+        </div>
+
+        <div id="game-over-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-title" style="color: #e74c3c;">จบเกม! 😭</div>
+                <p class="modal-text">คะแนนรวม: <span id="final-score">0</span></p>
+                <button class="btn-modal" onclick="resetGame()">เริ่มใหม่ 🔄</button>
+            </div>
+        </div>
+
         <div>ทำให้ได้ผลลัพธ์:</div>
         <div id="target-number" class="target-box">?</div>
 
@@ -165,10 +240,10 @@
             <div class="slot" id="slot-op" onclick="handleSlotClick(this)"></div>
             <div class="slot" id="slot-2" onclick="handleSlotClick(this)"></div>
             <div class="equals-sign">=</div>
-            <div id="target-display" style="font-size: 32px; font-weight: bold;">?</div>
+            <div id="target-display" style="font-size: 28px; font-weight: bold;">?</div>
         </div>
 
-        <p>1. จิ้มตัวเลือกด้านล่าง 2. จิ้มช่องว่างเพื่อใส่</p>
+        <p style="margin: 5px 0 10px 0;">จิ้มตัวเลือก แล้วนำไปใส่ในช่องว่าง 👇</p>
         <div class="options-area" id="options-container">
             </div>
 
@@ -176,47 +251,112 @@
     </div>
 
     <script>
-        // --- Game Variables ---
         let currentTarget = 0;
         let score = 0;
-        let selectedItem = null; // เก็บว่าตอนนี้เราจิ้มตัวไหนค้างไว้อยู่
+        let currentLevel = 1;
+        let bestScore = localStorage.getItem('mathGameBestScore') || 0;
+        let selectedItem = null; 
+
+        document.getElementById('best-score').innerText = bestScore;
+
+        // --- Logic ความยากของเกม (Dynamic Difficulty) ---
+        function getDifficultyParams(score) {
+            // คำนวณ Level จากคะแนน (ทุกๆ 100 คะแนน = 1 Level)
+            const level = Math.floor(score / 100) + 1;
+            
+            let maxNum = 10;
+            let operators = ['+', '-'];
+            let maxMultiply = 9; // ตัวคูณสูงสุด (กันยากเกิน)
+
+            if (level === 1) {
+                // 0-99: ง่าย
+                maxNum = 10;
+                operators = ['+', '-'];
+            } else if (level === 2) {
+                // 100-199: เริ่มมีคูณ, เลขถึง 20
+                maxNum = 20;
+                operators = ['+', '-', '*'];
+                maxMultiply = 9; // คูณเลขหลักเดียว
+            } else if (level === 3) {
+                // 200-299: เลขถึง 50
+                maxNum = 50;
+                operators = ['+', '-', '*'];
+                maxMultiply = 12; // คูณถึงแม่ 12
+            } else {
+                // 300+: ยากสุด
+                maxNum = 100;
+                operators = ['+', '-', '*'];
+                maxMultiply = 15;
+            }
+
+            return { level, maxNum, operators, maxMultiply };
+        }
 
         function generateLevel() {
-            // สุ่มโจทย์เหมือนเดิม
-            const num1 = Math.floor(Math.random() * 9) + 1; 
-            const num2 = Math.floor(Math.random() * 9) + 1; 
-            const operators = ['+', '-', '*']; 
-            const selectedOp = operators[Math.floor(Math.random() * operators.length)];
+            // ดึงค่าความยากปัจจุบัน
+            const difficulty = getDifficultyParams(score);
+            currentLevel = difficulty.level;
+            
+            // อัปเดตหน้าจอ Level
+            document.getElementById('level-display').innerText = `LEVEL ${currentLevel}`;
 
+            // สุ่มเครื่องหมายก่อน (เพื่อคุมตัวเลขให้เหมาะกับเครื่องหมาย)
+            const selectedOp = difficulty.operators[Math.floor(Math.random() * difficulty.operators.length)];
+            
+            let num1, num2;
+
+            // ถ้าเป็นคูณ ให้ใช้เลขน้อยหน่อย (เดี๋ยวเด็กคิดไม่ออก)
+            if (selectedOp === '*') {
+                num1 = Math.floor(Math.random() * difficulty.maxMultiply) + 2; // 2 ถึง maxMultiply
+                num2 = Math.floor(Math.random() * difficulty.maxMultiply) + 2;
+            } else {
+                // ถ้าบวก/ลบ ใช้เลขตามความยากปกติ
+                num1 = Math.floor(Math.random() * difficulty.maxNum) + 1;
+                num2 = Math.floor(Math.random() * difficulty.maxNum) + 1;
+            }
+
+            // คำนวณผลลัพธ์
             let result;
             if (selectedOp === '+') result = num1 + num2;
             else if (selectedOp === '-') result = num1 - num2;
             else if (selectedOp === '*') result = num1 * num2;
 
-            if (result < 0) { generateLevel(); return; }
+            // ถ้าผลลัพธ์ติดลบ หรือเป็น 0 (สำหรับเด็กเริ่มเรียน) ให้สุ่มใหม่
+            // หรือถ้าเลขเยอะเกินไปสำหรับบวก (เช่น level 1 ไม่อยากให้เกิน 20)
+            if (result <= 0 || (currentLevel === 1 && result > 20)) { 
+                generateLevel(); 
+                return; 
+            }
 
             currentTarget = result;
             document.getElementById('target-number').innerText = currentTarget;
             document.getElementById('target-display').innerText = currentTarget;
             
             clearSlots();
-            selectedItem = null; // รีเซ็ตการเลือก
+            selectedItem = null;
 
-            // สร้างตัวเลือก
+            // สร้างตัวเลือก (Array)
             let options = [];
             options.push({ val: num1, type: 'number' });
             options.push({ val: num2, type: 'number' });
             options.push({ val: selectedOp, type: 'operator' });
-            options.push({ val: Math.floor(Math.random() * 9) + 1, type: 'number' });
-            options.push({ val: Math.floor(Math.random() * 9) + 1, type: 'number' });
-            const decoyOp = operators.filter(o => o !== selectedOp)[0];
+
+            // สร้างตัวหลอก (Decoy) ที่สมเหตุสมผลกับ Level
+            options.push({ val: Math.floor(Math.random() * difficulty.maxNum) + 1, type: 'number' });
+            options.push({ val: Math.floor(Math.random() * difficulty.maxNum) + 1, type: 'number' });
+            
+            // สุ่มเครื่องหมายหลอก (ที่ไม่ซ้ำกับตัวถูก)
+            const allOps = ['+', '-', '*'];
+            const decoyOp = allOps.filter(o => o !== selectedOp)[0];
             options.push({ val: decoyOp, type: 'operator' });
+
+            // สลับตำแหน่ง (Shuffle)
             options.sort(() => Math.random() - 0.5);
 
+            // แสดงผล
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             
-            // สร้างปุ่ม (เปลี่ยนจาก Draggable เป็น Clickable)
             options.forEach((item, index) => {
                 const el = document.createElement('div');
                 el.classList.add('option-item');
@@ -224,73 +364,45 @@
                 el.id = 'opt-' + index;
                 el.dataset.val = item.val;
                 el.dataset.type = item.type;
-                
-                // Event: เมื่อคลิกที่ตัวเลือก
                 el.onclick = () => handleOptionClick(el);
-
                 container.appendChild(el);
             });
         }
 
-        // --- Logic: การเลือกตัวเลือก (Select) ---
+        // --- Interaction Logic (เหมือนเดิม) ---
         function handleOptionClick(el) {
-            // ถ้าคลิกตัวเดิม ให้ยกเลิกการเลือก
             if (selectedItem && selectedItem.id === el.id) {
                 el.classList.remove('selected');
                 selectedItem = null;
                 return;
             }
-
-            // ลบ Highlight ตัวเก่าออกก่อน (ถ้ามี)
             document.querySelectorAll('.option-item').forEach(i => i.classList.remove('selected'));
-
-            // Highlight ตัวใหม่
             el.classList.add('selected');
-            
-            // จำค่าไว้เตรียมวาง
-            selectedItem = {
-                id: el.id,
-                val: el.dataset.val,
-                type: el.dataset.type
-            };
+            selectedItem = { id: el.id, val: el.dataset.val, type: el.dataset.type };
         }
 
-        // --- Logic: การวางลงช่อง (Place) ---
         function handleSlotClick(slot) {
-            // กรณีที่ 1: มีการเลือกตัวเลขค้างไว้ -> พยายามวาง
             if (selectedItem) {
-                // เช็คว่าวางถูกประเภทไหม (เลขลงเลข, เครื่องหมายลงเครื่องหมาย)
                 let isValid = false;
                 if (slot.id === 'slot-op' && selectedItem.type === 'operator') isValid = true;
                 if ((slot.id === 'slot-1' || slot.id === 'slot-2') && selectedItem.type === 'number') isValid = true;
 
                 if (isValid) {
-                    // ถ้าช่องมีของอยู่แล้ว ให้คืนของเก่ากลับไปก่อน (Swap)
-                    if (slot.classList.contains('filled')) {
-                        returnItemToInventory(slot);
-                    }
-
-                    // วางของใหม่
+                    if (slot.classList.contains('filled')) returnItemToInventory(slot);
                     slot.innerText = selectedItem.val;
                     slot.dataset.value = selectedItem.val;
                     slot.dataset.sourceId = selectedItem.id;
                     slot.classList.add('filled');
 
-                    // ซ่อนตัวเลือกด้านล่าง
                     const sourceEl = document.getElementById(selectedItem.id);
                     sourceEl.classList.add('hidden');
                     sourceEl.classList.remove('selected');
-
-                    // รีเซ็ตตัวเลือก
                     selectedItem = null;
                 } else {
-                    // แจ้งเตือนถ้าวางผิดช่อง (แบบนุ่มนวล)
                     slot.classList.add('wrong-bg');
                     setTimeout(() => slot.classList.remove('wrong-bg'), 300);
                 }
-            } 
-            // กรณีที่ 2: ไม่ได้เลือกอะไรไว้ แต่คลิกช่องที่มีของ -> เอาออก (Clear)
-            else if (slot.classList.contains('filled')) {
+            } else if (slot.classList.contains('filled')) {
                 returnItemToInventory(slot);
             }
         }
@@ -299,12 +411,8 @@
             const sourceId = slot.dataset.sourceId;
             if (sourceId) {
                 const sourceEl = document.getElementById(sourceId);
-                if (sourceEl) {
-                    sourceEl.classList.remove('hidden');
-                    sourceEl.classList.remove('selected');
-                }
+                if (sourceEl) sourceEl.classList.remove('hidden', 'selected');
             }
-            // ล้างช่อง
             slot.innerText = '';
             slot.classList.remove('filled', 'correct-bg', 'wrong-bg');
             delete slot.dataset.value;
@@ -317,7 +425,7 @@
             });
         }
 
-        // --- ตรวจคำตอบ (เหมือนเดิม) ---
+        // --- Check Answer & Level Flow ---
         function checkAnswer() {
             const v1 = document.getElementById('slot-1').dataset.value;
             const op = document.getElementById('slot-op').dataset.value;
@@ -340,18 +448,38 @@
                 score += 10;
                 document.getElementById('score').innerText = score;
                 document.querySelectorAll('.slot').forEach(s => s.classList.add('correct-bg'));
-                setTimeout(() => { 
-                    alert("ถูกต้อง! 🎉"); 
-                    generateLevel(); 
-                }, 500);
+                
+                setTimeout(() => {
+                    document.getElementById('correct-modal').style.display = 'flex';
+                }, 300);
             } else {
-                document.querySelectorAll('.slot').forEach(s => s.classList.add('wrong-bg'));
-                setTimeout(() => { 
-                    document.querySelectorAll('.slot').forEach(s => s.classList.remove('wrong-bg')); 
-                }, 500);
+                triggerGameOver();
             }
         }
 
+        function nextLevel() {
+            document.getElementById('correct-modal').style.display = 'none';
+            generateLevel();
+        }
+
+        function triggerGameOver() {
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('mathGameBestScore', bestScore);
+                document.getElementById('best-score').innerText = bestScore;
+            }
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('game-over-modal').style.display = 'flex';
+        }
+
+        function resetGame() {
+            score = 0;
+            document.getElementById('score').innerText = score;
+            document.getElementById('game-over-modal').style.display = 'none';
+            generateLevel();
+        }
+
+        // เริ่มเกม
         generateLevel();
 
     </script>
