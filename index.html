@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นักปรุงสมการ (ฉบับสมบูรณ์)</title>
+    <style>
+        /* นำเข้าฟอนต์สวยๆ จาก Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;600&display=swap');
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none; /* ห้ามคลุมดำ */
+        }
+
+        h1 { margin-top: 20px; color: #f1c40f; }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* ส่วนแสดงโจทย์เป้าหมาย */
+        .target-box {
+            font-size: 50px;
+            background: #e74c3c;
+            padding: 10px 40px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 0 #c0392b;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* พื้นที่วางคำตอบ (Equation Slots) */
+        .equation-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 40px;
+            flex-wrap: wrap; /* เผื่อจอเล็ก */
+        }
+
+        .slot {
+            width: 80px;
+            height: 80px;
+            background-color: #ecf0f1;
+            border: 4px dashed #95a5a6;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            color: #2c3e50;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        /* เมื่อมีตัวเลขอยู่ในช่อง */
+        .slot.filled {
+            border-style: solid;
+            border-color: #2ecc71;
+            background-color: #fff;
+            cursor: pointer; /* เมาส์เป็นรูปมือ */
+            box-shadow: 0 4px 0 #bdc3c7;
+        }
+
+        /* เมื่อเอาเมาส์ชี้ช่องที่มีตัวเลข (เตรียมลบ) */
+        .slot.filled:hover {
+            background-color: #ffcccc;
+            border-color: #e74c3c;
+            transform: scale(1.05);
+        }
+
+        .equals-sign { font-size: 40px; margin: 0 5px; }
+
+        /* ตัวเลือกที่จะให้ลาก (Inventory) */
+        .options-area {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            min-height: 80px;
+        }
+
+        .draggable-item {
+            width: 60px;
+            height: 60px;
+            background: #3498db;
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: grab;
+            box-shadow: 0 4px 0 #2980b9;
+            transition: transform 0.1s;
+        }
+
+        .draggable-item:active { cursor: grabbing; transform: scale(0.9); }
+        .draggable-item[data-type="operator"] { background: #9b59b6; box-shadow: 0 4px 0 #8e44ad; }
+
+        /* ปุ่มและ Feedback */
+        .btn-check {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 24px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #219150;
+            font-family: 'Kanit', sans-serif;
+            transition: transform 0.1s;
+        }
+        
+        .btn-check:active { transform: translateY(4px); box-shadow: none; }
+
+        .score-board { font-size: 20px; margin-bottom: 10px; color: #ecf0f1; }
+        
+        /* เอฟเฟกต์ตอบถูก/ผิด */
+        .correct-bg { background-color: #27ae60 !important; color: white !important; border-color: #2ecc71 !important; }
+        .wrong-bg { animation: shake 0.5s; background-color: #c0392b !important; color: white !important; border-color: #e74c3c !important; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧮 นักปรุงสมการ</h1>
+    <div class="score-board">คะแนน: <span id="score">0</span></div>
+
+    <div class="game-container">
+        <div>ทำให้ได้ผลลัพธ์:</div>
+        <div id="target-number" class="target-box">?</div>
+
+        <div class="equation-area">
+            <div class="slot" id="slot-1" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            <div class="slot" id="slot-op" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            <div class="slot" id="slot-2" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+            <div class="equals-sign">=</div>
+            <div id="target-display" style="font-size: 32px; font-weight: bold;">?</div>
+        </div>
+
+        <p>ลากตัวเลขและเครื่องหมายด้านล่าง 👇 (คลิกในช่องเพื่อลบออก)</p>
+        <div class="options-area" id="options-container">
+            </div>
+
+        <button class="btn-check" onclick="checkAnswer()">ตรวจคำตอบ ✅</button>
+    </div>
+
+    <script>
+        // --- Game Logic ---
+        
+        let currentTarget = 0;
+        let score = 0;
+        
+        // ฟังก์ชันสร้างด่านใหม่
+        function generateLevel() {
+            // สุ่มเลข 1-9
+            const num1 = Math.floor(Math.random() * 9) + 1; 
+            const num2 = Math.floor(Math.random() * 9) + 1; 
+            
+            // สุ่มเครื่องหมาย
+            const operators = ['+', '-', '*']; 
+            const selectedOp = operators[Math.floor(Math.random() * operators.length)];
+
+            // คำนวณคำตอบ
+            let result;
+            if (selectedOp === '+') result = num1 + num2;
+            else if (selectedOp === '-') result = num1 - num2;
+            else if (selectedOp === '*') result = num1 * num2;
+
+            // ถ้าผลลัพธ์ติดลบ ให้สุ่มใหม่ (เด็กจะได้ไม่งง)
+            if (result < 0) {
+                generateLevel(); 
+                return;
+            }
+
+            currentTarget = result;
+            
+            // อัปเดตหน้าจอ
+            document.getElementById('target-number').innerText = currentTarget;
+            document.getElementById('target-display').innerText = currentTarget;
+            
+            clearSlots(); // ล้างกระดานเก่า
+
+            // สร้างตัวเลือก (Array)
+            let options = [];
+            // ตัวเลือกที่ถูก
+            options.push({ val: num1, type: 'number' });
+            options.push({ val: num2, type: 'number' });
+            options.push({ val: selectedOp, type: 'operator' });
+
+            // ตัวเลือกหลอก (Decoy)
+            options.push({ val: Math.floor(Math.random() * 9) + 1, type: 'number' });
+            options.push({ val: Math.floor(Math.random() * 9) + 1, type: 'number' });
+            // สุ่มเครื่องหมายหลอกที่ไม่ซ้ำกับตัวถูก
+            const decoyOp = operators.filter(o => o !== selectedOp)[0];
+            options.push({ val: decoyOp, type: 'operator' });
+
+            // สลับตำแหน่งตัวเลือก (Shuffle)
+            options.sort(() => Math.random() - 0.5);
+
+            // วาดตัวเลือกลงหน้าจอ
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            options.forEach((item, index) => {
+                const el = document.createElement('div');
+                el.classList.add('draggable-item');
+                el.innerText = item.val;
+                el.draggable = true;
+                el.id = 'drag-' + index;
+                el.dataset.val = item.val;
+                el.dataset.type = item.type;
+                
+                // Event ตอนเริ่มลาก
+                el.ondragstart = (e) => {
+                    e.dataTransfer.setData("text", e.target.id);
+                    e.dataTransfer.setData("val", item.val);
+                    e.dataTransfer.setData("type", item.type);
+                };
+
+                container.appendChild(el);
+            });
+        }
+
+        // --- ระบบ Drag & Drop และการดึงออก (Core Fixes) ---
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const sourceId = ev.dataTransfer.getData("text");
+            const val = ev.dataTransfer.getData("val");
+            const type = ev.dataTransfer.getData("type");
+            
+            const draggedElement = document.getElementById(sourceId);
+            const dropZone = ev.target;
+
+            // เช็คว่าลากมาใส่ถูกช่องไหม (เลข->ช่องเลข, เครื่องหมาย->ช่องกลาง)
+            let isValidZone = false;
+            if (dropZone.id === 'slot-op' && type === 'operator') isValidZone = true;
+            if ((dropZone.id === 'slot-1' || dropZone.id === 'slot-2') && type === 'number') isValidZone = true;
+
+            if (isValidZone) {
+                // FIX 1: ถ้าช่องนี้มีของอยู่แล้ว ให้ดีดตัวเก่ากลับไปก่อน (Swap)
+                if (dropZone.classList.contains('filled')) {
+                    returnItemToInventory(dropZone);
+                }
+
+                // เอาตัวใหม่ใส่เข้าไป
+                dropZone.innerText = val;
+                dropZone.dataset.value = val;
+                dropZone.dataset.sourceId = sourceId; // จำว่ามาจาก ID ไหน
+                dropZone.classList.add('filled');
+                
+                // ซ่อนตัวต้นทาง (Inventory)
+                if(draggedElement) draggedElement.style.visibility = 'hidden';
+                
+                // FIX 2: สร้าง Event คลิกเพื่อลบออก (Click to remove)
+                dropZone.onclick = function() {
+                    returnItemToInventory(this);
+                };
+            }
+        }
+
+        // ฟังก์ชันช่วย: คืนค่ากลับไปที่กล่องด้านล่าง
+        function returnItemToInventory(slotElement) {
+            const sourceId = slotElement.dataset.sourceId;
+            
+            if (sourceId) {
+                const sourceElement = document.getElementById(sourceId);
+                if (sourceElement) {
+                    sourceElement.style.visibility = 'visible'; // แสดงตัวเดิมกลับมา
+                }
+            }
+
+            // ล้างค่าในช่อง
+            slotElement.innerText = '';
+            slotElement.classList.remove('filled', 'correct-bg', 'wrong-bg');
+            delete slotElement.dataset.value;
+            delete slotElement.dataset.sourceId;
+            
+            // เอา Event คลิกออก
+            slotElement.onclick = null; 
+        }
+
+        // ฟังก์ชันช่วย: ล้างทุกช่อง (ใช้ตอนเริ่มด่านใหม่)
+        function clearSlots() {
+            ['slot-1', 'slot-op', 'slot-2'].forEach(id => {
+                const el = document.getElementById(id);
+                // ใช้ returnItemToInventory เพื่อความชัวร์ว่าของจะกลับไปที่เดิมถ้ามีค้างอยู่
+                returnItemToInventory(el);
+            });
+        }
+
+        // --- ตรวจคำตอบ ---
+        function checkAnswer() {
+            const v1 = document.getElementById('slot-1').dataset.value;
+            const op = document.getElementById('slot-op').dataset.value;
+            const v2 = document.getElementById('slot-2').dataset.value;
+
+            if (!v1 || !op || !v2) {
+                alert("กรุณาเติมให้ครบทุกช่องก่อนนะครับ!");
+                return;
+            }
+
+            let userResult = 0;
+            const num1 = parseInt(v1);
+            const num2 = parseInt(v2);
+
+            if (op === '+') userResult = num1 + num2;
+            else if (op === '-') userResult = num1 - num2;
+            else if (op === '*') userResult = num1 * num2;
+
+            if (userResult === currentTarget) {
+                // ตอบถูก
+                score += 10;
+                document.getElementById('score').innerText = score;
+                // เปลี่ยนสีเขียว
+                document.querySelectorAll('.slot').forEach(s => s.classList.add('correct-bg'));
+                
+                setTimeout(() => {
+                    alert("ถูกต้อง! 🎉 เก่งมาก");
+                    generateLevel(); // ไปด่านต่อไป
+                }, 500);
+            } else {
+                // ตอบผิด
+                // เปลี่ยนสีแดงและสั่น
+                document.querySelectorAll('.slot').forEach(s => s.classList.add('wrong-bg'));
+                setTimeout(() => {
+                    document.querySelectorAll('.slot').forEach(s => s.classList.remove('wrong-bg'));
+                }, 500);
+            }
+        }
+
+        // เริ่มเกมครั้งแรก
+        generateLevel();
+
+    </script>
+</body>
+</html>
